@@ -24,4 +24,9 @@ setup(
     description='Script to calculate Sentinel-2 (A-B) view_zenith, view_azimuth, sun_zenith and sun_azimuth',
     # We will also need a readme eventually (there will be a warning)
     # long_description=open('README.txt').read(),
+    entry_points={
+        'console_scripts': [
+            's2angs_generate=s2angs.cli:main',
+        ],
+    },
 )

@@ -23,7 +23,7 @@ def get_tileid(xml):
        str: .SAFE tile id.
     """
     tile_id = ""
-    # Parse the XML file 
+    # Parse the XML file
     tree = ET.parse(xml)
     root = tree.getroot()
 
@@ -49,7 +49,7 @@ def get_sun_angles(xml):
     solar_zenith_values = numpy.empty((23,23,)) * numpy.nan #initiates matrix
     solar_azimuth_values = numpy.empty((23,23,)) * numpy.nan
 
-    # Parse the XML file 
+    # Parse the XML file
     tree = ET.parse(xml)
     root = tree.getroot()
 
@@ -101,7 +101,7 @@ def get_sensor_angles(xml):
     sensor_zenith_values = numpy.empty((numband,23,23)) * numpy.nan #initiates matrix
     sensor_azimuth_values = numpy.empty((numband,23,23)) * numpy.nan
 
-    # Parse the XML file 
+    # Parse the XML file
     tree = ET.parse(xml)
     root = tree.getroot()
 
@@ -183,7 +183,7 @@ def generate_anglebands(xml):
     tmp_ds = gdal.Open(imgref)
     tmp_ds.GetRasterBand(1).SetNoDataValue(numpy.nan)
     geotrans = tmp_ds.GetGeoTransform()  #get GeoTranform from existed 'data0'
-    proj = tmp_ds.GetProjection() #you can get from a exsited tif or import 
+    proj = tmp_ds.GetProjection() #you can get from a exsited tif or import
 
     scenename = get_tileid(xml)
     solar_zenith, solar_azimuth = get_sun_angles(xml)
@@ -212,7 +212,7 @@ def resample_anglebands(ang_matrix, imgref, filename):
     src_ds = gdal.Open(imgref)
     src_ds.GetRasterBand(1).SetNoDataValue(numpy.nan)
     geotrans = src_ds.GetGeoTransform() #get GeoTranform from existed 'data0'
-    proj = src_ds.GetProjection() #you can get from a exsited tif or import 
+    proj = src_ds.GetProjection() #you can get from a exsited tif or import
 
     cols = src_ds.RasterXSize
     rows = src_ds.RasterYSize
@@ -244,7 +244,7 @@ def resample_anglebands(ang_matrix, imgref, filename):
     return
 
 
-def generate_resampled_anglebands(xml):
+def generate_resampled_anglebands(xml, outdir=None):
     """Generates angle bands resampled to 10 meters.
     Parameters:
        xml (str): path to MTD_TL.xml.
@@ -253,7 +253,10 @@ def generate_resampled_anglebands(xml):
     """
     path = os.path.split(xml)[0]
     imgFolder = path + "/IMG_DATA/"
-    angFolder = path + "/ANG_DATA/"
+    if outdir is not None:
+        angFolder = outdir
+    else:
+        angFolder = path + "/ANG_DATA/"
     os.makedirs(angFolder, exist_ok=True)
 
     #use band 4 as reference due to 10m spatial resolution
@@ -271,10 +274,10 @@ def generate_resampled_anglebands(xml):
     sensor_zenith_mean /= len(sensor_azimuth)
     sensor_azimuth_mean /= len(sensor_azimuth)
 
-    sz_path = angFolder + scenename + '_solar_zenith_resampled.tif'
-    sa_path = angFolder + scenename + '_solar_azimuth_resampled.tif'
-    vz_path = angFolder + scenename + '_sensor_zenith_mean_resampled.tif'
-    va_path = angFolder + scenename + '_sensor_azimuth_mean_resampled.tif'
+    sz_path = os.path.join(angFolder, scenename + '_solar_zenith_resampled.tif')
+    sa_path = os.path.join(angFolder, scenename + '_solar_azimuth_resampled.tif')
+    vz_path = os.path.join(angFolder, scenename + '_sensor_zenith_mean_resampled.tif')
+    va_path = os.path.join(angFolder, scenename + '_sensor_azimuth_mean_resampled.tif')
 
     resample_anglebands(solar_zenith, imgref, sz_path)
     resample_anglebands(solar_azimuth, imgref, sa_path)
@@ -294,7 +297,7 @@ def xml_from_safe(SAFEfile):
     return os.path.join(SAFEfile, 'GRANULE', os.path.join(os.listdir(os.path.join(SAFEfile,'GRANULE/'))[0], 'MTD_TL.xml'))
 
 
-def gen_s2_ang_from_SAFE(SAFEfile):
+def gen_s2_ang_from_SAFE(SAFEfile, outdir=None):
     """Generate Sentinel 2 angles using .SAFE.
     Parameters:
        SAFEfile (str): path to Sentinel-2 .SAFE folder.
@@ -306,22 +309,22 @@ def gen_s2_ang_from_SAFE(SAFEfile):
     # generate_anglebands(os.path.join(SAFEfile, 'GRANULE', os.path.join(os.listdir(os.path.join(SAFEfile,'GRANULE/'))[0], 'MTD_TL.xml')))
 
     ### Generates resampled anglebands (to 10m)
-    sz_path, sa_path, vz_path, va_path = generate_resampled_anglebands(xml)
+    sz_path, sa_path, vz_path, va_path = generate_resampled_anglebands(xml, outdir=outdir)
     return sz_path, sa_path, vz_path, va_path
 
 
-def gen_s2_ang_from_xml(xml):
+def gen_s2_ang_from_xml(xml, outdir=None):
     """Generate Sentinel 2 angles using a MTD_TL.xml of .SAFE.
     Parameters:
        xml (str): path to MTD_TL.xml.
     Returns:
        str, str, str, str: path to solar zenith image, path to solar azimuth image, path to view (sensor) zenith image and path to view (sensor) azimuth image, respectively.
     """
-    sz_path, sa_path, vz_path, va_path = generate_resampled_anglebands(xml)
+    sz_path, sa_path, vz_path, va_path = generate_resampled_anglebands(xml, outdir=outdir)
     return sz_path, sa_path, vz_path, va_path
 
 
-def gen_s2_ang_from_zip(zipfile):
+def gen_s2_ang_from_zip(zipfile, outdir=None):
     """Generate Sentinel 2 angles using a zipped .SAFE.
     Parameters:
        zipfile (str): path to zipfile.
@@ -336,9 +339,10 @@ def gen_s2_ang_from_zip(zipfile):
     shutil.unpack_archive(zipfile, temp_dir, 'zip')
     SAFEfile = os.path.join(temp_dir, zipfoldername)
     xml = xml_from_safe(SAFEfile)
-    sz_path, sa_path, vz_path, va_path = generate_resampled_anglebands(xml)
-    ang_dir = os.path.join(SAFEfile,'GRANULE', os.listdir(os.path.join(SAFEfile,'GRANULE/'))[0], 'ANG_DATA')
-    shutil.move(ang_dir, work_dir)
+    sz_path, sa_path, vz_path, va_path = generate_resampled_anglebands(xml, outdir=outdir)
+    if outdir is None:
+        ang_dir = os.path.join(SAFEfile,'GRANULE', os.listdir(os.path.join(SAFEfile,'GRANULE/'))[0], 'ANG_DATA')
+        shutil.move(ang_dir, work_dir)
     shutil.rmtree(temp_dir)
 
     return sz_path, sa_path, vz_path, va_path
@@ -350,7 +354,7 @@ def gen_s2_ang(path):
        zipfile (str): path to zipfile.
     """
     print('Generating angles from {}'.format(path), flush=True)
-    if path.find("_MSIL2A_") is not -1:
+    if path.find("_MSIL2A_") != -1:
         print('ERROR: Input uses L1C product, not L2A. Change your input file.', flush=True)
     elif path.endswith('.SAFE'):
         sz_path, sa_path, vz_path, va_path = gen_s2_ang_from_SAFE(path) #path to SAFE
