@@ -252,7 +252,6 @@ def generate_resampled_anglebands(xml, outdir=None):
        str, str, str, str: path to solar zenith image, path to solar azimuth image, path to view (sensor) zenith image and path to view (sensor) azimuth image, respectively.
     """
     path = os.path.split(xml)[0]
-    imgFolder = path + "/IMG_DATA/"
     if outdir is not None:
         angFolder = outdir
     else:
@@ -260,7 +259,7 @@ def generate_resampled_anglebands(xml, outdir=None):
     os.makedirs(angFolder, exist_ok=True)
 
     #use band 4 as reference due to 10m spatial resolution
-    imgref = [f for f in glob.glob(imgFolder + "**/*04.jp2", recursive=True)][0]
+    imgref = [f for f in glob.glob(path + "**/*04.jp2", recursive=True)][0]
 
     scenename = get_tileid(xml)
     solar_zenith, solar_azimuth = get_sun_angles(xml)
